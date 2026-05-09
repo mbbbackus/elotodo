@@ -1214,10 +1214,12 @@ renderAll();
 tickTime();
 
 // --- Background video: pick one at random based on screen orientation ---
+// Videos are pre-processed palindromes (forward + reversed concatenated),
+// so native loop="true" gives a seamless ping-pong with no JS hacks.
 (function setupBackground() {
   const desktopVideos = [
     "videos/desktop-1-autumn-grass.mp4",
-    "videos/desktop-2-grassland-sunset.mp4",
+    "videos/desktop-2-dew-grass.mp4",
     "videos/desktop-3-forest-leaves.mp4",
   ];
   const mobileVideos = [
