@@ -309,6 +309,107 @@
     transform: rotate(45deg);
   }
 
+  /* Landing view (paste a list) */
+  #view-landing {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+  }
+  .landing-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.22) 100%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 24px;
+    padding: 32px 36px;
+    max-width: 580px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(30, 60, 35, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .landing-card h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .landing-card p {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    opacity: 0.85;
+  }
+  .landing-card textarea {
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .landing-card textarea:focus {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.75);
+  }
+  .landing-card textarea::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+  .landing-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .landing-count {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    font-weight: 600;
+    padding: 10px 18px;
+  }
+  .btn-primary:disabled {
+    background: var(--border);
+    border-color: var(--border);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+  @media (hover: hover) {
+    .btn-primary:not(:disabled):hover {
+      background: var(--accent-deep);
+      border-color: var(--accent-deep);
+    }
+  }
+
+  /* Hide non-landing UI when in landing mode */
+  body.landing-mode .progress-wrap,
+  body.landing-mode .toggle-bar,
+  body.landing-mode .actions,
+  body.landing-mode .time-tracker,
+  body.landing-mode .auto-timer,
+  body.landing-mode .header-reset {
+    display: none !important;
+  }
+
   /* Modal */
   .modal-backdrop {
     position: fixed;
@@ -598,6 +699,20 @@
   <section id="view-rank" style="display:none;">
     <div class="ranking" id="ranking"></div>
   </section>
+
+  <section id="view-landing" style="display:none;">
+    <div class="landing-card">
+      <h2>What's on your plate?</h2>
+      <p>Paste your to-do list below — any format works. Numbered, bulleted, or one item per line. We'll turn it into a head-to-head ranking.</p>
+      <textarea id="task-input" placeholder="1. Call mom&#10;2. Finish report&#10;3. Buy groceries&#10;- Work out&#10;- Take out trash&#10;..." spellcheck="false"></textarea>
+      <div class="landing-actions">
+        <span class="landing-count" id="task-count">0 items</span>
+        <button class="btn btn-primary" id="task-submit" disabled>
+          Start ranking <i class="ph-fill ph-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </section>
 </main>
 
 <div class="modal-backdrop" id="reset-modal">
@@ -642,48 +757,80 @@
 </div>
 
 <script>
-const TASKS = [
-  { name: "Charge whoop", icon: "ph-battery-charging" },
-  { name: "Order jewelry for Lizzie's birthday", icon: "ph-diamond" },
-  { name: "Order flowers for Mother's Day", icon: "ph-flower" },
-  { name: "Call Lizzie", icon: "ph-phone" },
-  { name: "Check in w/ psychiatrist about meds (enough for trip)", icon: "ph-pill" },
-  { name: "Call Tony", icon: "ph-phone-call" },
-  { name: "Hang out with Evan", icon: "ph-users-three" },
-  { name: "Respond to Sean", icon: "ph-chat-circle-text" },
-  { name: "Schedule appointment with Matthew Na", icon: "ph-calendar-check" },
-  { name: "Put away clothes and do laundry", icon: "ph-t-shirt" },
-  { name: "Take out trash", icon: "ph-trash" },
-  { name: "Reach out to statue guy", icon: "ph-person-arms-spread" },
-  { name: "Fix openclaw (use ChatGPT)", icon: "ph-bug" },
-  { name: "Create dr appointments for annual physical", icon: "ph-stethoscope" },
-  { name: "Create dentist appointment", icon: "ph-tooth" },
-  { name: "Create eye dr appointment", icon: "ph-eye" },
-  { name: "Buy proper MacBook charger", icon: "ph-plug-charging" },
-  { name: "Meditate", icon: "ph-yin-yang" },
-  { name: "Start calorie counting", icon: "ph-fork-knife" },
-  { name: "Work out", icon: "ph-barbell" },
-  { name: "Work on wikigraphica", icon: "ph-graph" },
-  { name: "Coordinate Helena's psych testing", icon: "ph-brain" },
-  { name: "Finish Stanford Interviewer instructions", icon: "ph-graduation-cap" },
-  { name: "Find a CPA", icon: "ph-calculator" },
-  { name: "Upload Lyft claims + Whoop", icon: "ph-upload-simple" },
-  { name: "Return box for freezer drawer and buy new one", icon: "ph-package" },
-  { name: "Do MathAcademy", icon: "ph-math-operations" },
-  { name: "Paint", icon: "ph-paint-brush" },
-  { name: "Anki", icon: "ph-cards" },
-  { name: "Get ahead on work", icon: "ph-briefcase" },
-  { name: "Check work email re: 401k action items", icon: "ph-envelope-open" },
-  { name: "Test budgeting app", icon: "ph-wallet" },
-  { name: "Reach out to NY Life about transferring to Wells Fargo", icon: "ph-bank" },
-  { name: "Buy new shaving supplies", icon: "ph-scissors" },
-  { name: "Cancel extra subscriptions", icon: "ph-prohibit" },
-  { name: "Reach back out to Thanasis about Eko Health", icon: "ph-heartbeat" },
-  { name: "Chess.com", icon: "ph-knight" },
-  { name: "Tweak personal website + tracking", icon: "ph-code" },
-  { name: "Strip wastes of time from openclaw", icon: "ph-scissors" },
-  { name: "Get rid of / sell shitty bed stand", icon: "ph-bed" },
+// Default icon when no keyword matches
+const DEFAULT_ICON = "ph-list-checks";
+
+// Lightweight keyword → Phosphor icon mapping. Tries keywords in order,
+// first match wins. LLM-based icon assignment can override per-item later.
+const ICON_RULES = [
+  [/\b(call|phone|ring up|talk to|reach out)\b/, "ph-phone"],
+  [/\b(text|sms|message)\b/, "ph-chat-circle-text"],
+  [/\b(email|inbox|reply|respond)\b/, "ph-envelope-open"],
+  [/\b(buy|order|purchase|pick up|shop)\b/, "ph-shopping-cart"],
+  [/\b(meet|appointment|schedule|book)\b/, "ph-calendar-check"],
+  [/\b(doctor|dr\.?|physical|clinic|medical|psychiatr)/, "ph-stethoscope"],
+  [/\b(dent(ist|al)|tooth|teeth)\b/, "ph-tooth"],
+  [/\b(eye|optometr|glasses|vision)\b/, "ph-eye"],
+  [/\b(med(s|ication)?|pill|prescription)\b/, "ph-pill"],
+  [/\b(meditat|yoga|mindful)/, "ph-yin-yang"],
+  [/\b(work\s?out|gym|exercise|fitness|run|jog|lift)/, "ph-barbell"],
+  [/\b(paint|art|sketch|draw)/, "ph-paint-brush"],
+  [/\b(clean|laundry|wash|tidy|dish)/, "ph-broom"],
+  [/\b(trash|garbage|recycl)/, "ph-trash"],
+  [/\b(cook|eat|food|kitchen|recipe|meal|calorie|diet)/, "ph-fork-knife"],
+  [/\b(read|book|chapter|library)/, "ph-book-open"],
+  [/\b(write|essay|journal|note|blog)/, "ph-pencil"],
+  [/\b(money|bank|finance|tax|cpa|account|invest|401k|wells fargo|nyl|insurance)/, "ph-bank"],
+  [/\b(car|drive|repair|mechanic|oil change)/, "ph-car"],
+  [/\b(dog|cat|pet|vet)/, "ph-paw-print"],
+  [/\b(plant|garden|water plants|flower)/, "ph-flower"],
+  [/\b(jewelry|ring|necklace|earring|diamond)/, "ph-diamond"],
+  [/\b(gift|present|birthday|anniversary)/, "ph-gift"],
+  [/\b(kid|child|baby|family)/, "ph-baby"],
+  [/\b(sleep|nap|bed)/, "ph-bed"],
+  [/\b(music|song|playlist|spotify)/, "ph-music-notes"],
+  [/\b(video|movie|tv|netflix|watch)/, "ph-television"],
+  [/\b(code|program|build|deploy|fix .*bug|debug|repo|pr\b)/, "ph-code"],
+  [/\b(chess|game|play)/, "ph-game-controller"],
+  [/\b(travel|trip|flight|hotel|vacation|airbnb)/, "ph-airplane-tilt"],
+  [/\b(charge|battery|whoop|charger|cable)/, "ph-battery-charging"],
+  [/\b(study|exam|class|course|school|learn|stanford|harvard|university|interview)/, "ph-graduation-cap"],
+  [/\b(upload|claim|receipt|invoice)/, "ph-upload-simple"],
+  [/\b(cancel|stop|unsubscribe|delete)/, "ph-prohibit"],
+  [/\b(brain|psych|therap|cognit)/, "ph-brain"],
+  [/\b(heart|cardio|pulse)/, "ph-heartbeat"],
+  [/\b(scissors|cut|shave|haircut)/, "ph-scissors"],
+  [/\b(clothes|laundry|shirt|outfit|fashion)/, "ph-t-shirt"],
+  [/\b(briefcase|work|office|career)/, "ph-briefcase"],
+  [/\b(wallet|budget|spend)/, "ph-wallet"],
+  [/\b(math|calculate|equation)/, "ph-math-operations"],
+  [/\b(graph|chart|wiki|data|analytics)/, "ph-chart-line"],
+  [/\b(box|package|return|ship)/, "ph-package"],
+  [/\b(plug|outlet|adapter)/, "ph-plug-charging"],
+  [/\b(person|friend|hang out|see)/, "ph-users-three"],
+  [/\b(card|flashcard|anki|review)/, "ph-cards"],
 ];
+
+function pickIcon(name) {
+  const lower = name.toLowerCase();
+  for (const [pattern, icon] of ICON_RULES) {
+    if (pattern.test(lower)) return icon;
+  }
+  return DEFAULT_ICON;
+}
+
+function parseTaskList(text) {
+  return text
+    .split(/\r?\n/)
+    .map(line => line
+      .replace(/^[\s\-\*\u2022\u00b7\u25aa\u25cf]+/, "")  // bullets
+      .replace(/^\d+[\.\)]\s*/, "")                          // 1. or 1)
+      .replace(/^[a-zA-Z][\.\)]\s+/, "")                     // a. or a)
+      .trim()
+    )
+    .filter(line => line.length > 0)
+    .slice(0, 200); // sanity cap
+}
 
 const STORAGE_KEY = "taskElo.v1";
 const START_ELO = 1200;
@@ -702,14 +849,14 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      // reconcile in case TASKS list changed
-      const byName = new Map(s.items.map(i => [i.name, i]));
-      const items = TASKS.map((t, idx) => {
-        const existing = byName.get(t.name);
-        return existing
-          ? { ...existing, icon: t.icon, idx, completed: !!existing.completed }
-          : { name: t.name, icon: t.icon, elo: START_ELO, n: 0, idx, completed: false };
-      });
+      const items = (s.items || []).map((it, idx) => ({
+        name: it.name,
+        icon: it.icon || pickIcon(it.name),
+        elo: typeof it.elo === "number" ? it.elo : START_ELO,
+        n: it.n || 0,
+        idx,
+        completed: !!it.completed,
+      }));
       return {
         items,
         comparisons: s.comparisons || 0,
@@ -720,7 +867,7 @@ function loadState() {
     }
   } catch (e) { console.warn("load failed", e); }
   return {
-    items: TASKS.map((t, idx) => ({ name: t.name, icon: t.icon, elo: START_ELO, n: 0, idx, completed: false })),
+    items: [],
     comparisons: 0,
     history: [],
     recentDeltas: [],
@@ -1117,21 +1264,34 @@ function skip() {
   renderAll();
 }
 
-// --- View toggling ---
+// --- View / mode handling ---
 const viewMatch = document.getElementById("view-match");
 const viewRank = document.getElementById("view-rank");
+const viewLanding = document.getElementById("view-landing");
 const tabMatch = document.getElementById("tab-match");
 const tabRank = document.getElementById("tab-rank");
-function showView(name) {
+
+function setMode(mode) {
   const progressWrap = document.querySelector(".progress-wrap");
-  if (name === "match") {
+  document.body.classList.remove("landing-mode", "match-mode", "rank-mode");
+  document.body.classList.add(mode + "-mode");
+
+  if (mode === "landing") {
+    viewLanding.style.display = "";
+    viewMatch.style.display = "none";
+    viewRank.style.display = "none";
+    stopAutoSkip();
+    setTimeout(() => document.getElementById("task-input")?.focus(), 50);
+  } else if (mode === "match") {
+    viewLanding.style.display = "none";
     viewMatch.style.display = "";
     viewRank.style.display = "none";
     tabMatch.classList.add("active");
     tabRank.classList.remove("active");
     if (progressWrap) progressWrap.style.display = "";
     resetAutoSkip();
-  } else {
+  } else if (mode === "rank") {
+    viewLanding.style.display = "none";
     viewMatch.style.display = "none";
     viewRank.style.display = "";
     tabRank.classList.add("active");
@@ -1141,8 +1301,55 @@ function showView(name) {
     stopAutoSkip();
   }
 }
-tabMatch.addEventListener("click", () => showView("match"));
-tabRank.addEventListener("click", () => showView("rank"));
+tabMatch.addEventListener("click", () => setMode("match"));
+tabRank.addEventListener("click", () => setMode("rank"));
+
+// --- Landing page submit ---
+const taskInput = document.getElementById("task-input");
+const taskSubmit = document.getElementById("task-submit");
+const taskCount = document.getElementById("task-count");
+
+function updateTaskCount() {
+  const items = parseTaskList(taskInput.value);
+  taskCount.textContent = items.length === 1 ? "1 item" : `${items.length} items`;
+  taskSubmit.disabled = items.length < 2;
+}
+taskInput.addEventListener("input", updateTaskCount);
+taskInput.addEventListener("paste", () => setTimeout(updateTaskCount, 0));
+
+function startWithTasks(tasks) {
+  state.items = tasks.map((name, idx) => ({
+    name,
+    icon: pickIcon(name),
+    elo: START_ELO,
+    n: 0,
+    idx,
+    completed: false,
+  }));
+  state.comparisons = 0;
+  state.history = [];
+  state.recentDeltas = [];
+  state.totalMs = 0;
+  lastTick = Date.now();
+  saveState();
+  currentPair = null;
+  recentPairs = [];
+  setMode("match");
+  renderAll();
+}
+
+taskSubmit.addEventListener("click", () => {
+  const tasks = parseTaskList(taskInput.value);
+  if (tasks.length < 2) return;
+  startWithTasks(tasks);
+});
+// Ctrl/Cmd+Enter from inside the textarea also submits
+taskInput.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    taskSubmit.click();
+  }
+});
 
 // --- Wiring ---
 document.getElementById("card-left").addEventListener("click", () => vote("left"));
@@ -1165,7 +1372,9 @@ document.getElementById("reset-confirm").addEventListener("click", () => {
   currentPair = null;
   recentPairs = [];
   resetModal.classList.remove("show");
-  renderAll();
+  taskInput.value = "";
+  updateTaskCount();
+  setMode("landing");
 });
 resetModal.addEventListener("click", (e) => {
   if (e.target === resetModal) resetModal.classList.remove("show");
@@ -1201,7 +1410,7 @@ function formatTime(ms) {
 }
 function tickTime() {
   const now = Date.now();
-  if (document.visibilityState === "visible") {
+  if (document.visibilityState === "visible" && !document.body.classList.contains("landing-mode")) {
     state.totalMs += now - lastTick;
   }
   lastTick = now;
@@ -1210,7 +1419,13 @@ function tickTime() {
 setInterval(() => { tickTime(); saveState(); }, 1000);
 document.addEventListener("visibilitychange", () => { lastTick = Date.now(); });
 
-renderAll();
+if (state.items.length === 0) {
+  setMode("landing");
+  updateTaskCount();
+} else {
+  setMode("match");
+  renderAll();
+}
 tickTime();
 
 // --- Background video: pick one at random based on screen orientation ---
