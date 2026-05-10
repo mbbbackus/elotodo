@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ELOTodo.com</title>
+<title>ELO Todo</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
@@ -381,22 +381,22 @@
     letter-spacing: 0.3px;
   }
   .btn-primary {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-    font-weight: 600;
+    background: #ffffff;
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
     padding: 10px 18px;
   }
   .btn-primary:disabled {
-    background: var(--border);
-    border-color: var(--border);
+    background: rgba(255, 255, 255, 0.55);
+    border-color: rgba(255, 255, 255, 0.5);
     color: var(--muted);
     cursor: not-allowed;
   }
   @media (hover: hover) {
     .btn-primary:not(:disabled):hover {
-      background: var(--accent-deep);
-      border-color: var(--accent-deep);
+      background: #ffffff;
+      border-color: var(--accent);
     }
   }
 
@@ -669,7 +669,7 @@
 <video class="bg-video" id="bg-video" autoplay muted loop playsinline></video>
 <div class="bg-overlay"></div>
 <header>
-  <h1>ELOTodo.com</h1>
+  <h1>ELO Todo</h1>
   <button class="header-reset" id="btn-reset" title="Reset all rankings">
     <i class="ph ph-trash"></i> Reset
   </button>
@@ -703,8 +703,8 @@
   <section id="view-landing" style="display:none;">
     <div class="landing-card">
       <h2>What's on your plate?</h2>
-      <p>Paste your to-do list below — any format works. Numbered, bulleted, or one item per line. We'll turn it into a head-to-head ranking.</p>
-      <textarea id="task-input" placeholder="1. Call mom&#10;2. Finish report&#10;3. Buy groceries&#10;- Work out&#10;- Take out trash&#10;..." spellcheck="false"></textarea>
+      <p>Let's help you prioritize so you can get back to doing what you want with your time.</p>
+      <textarea id="task-input" placeholder="Call mom&#10;Finish report&#10;Buy groceries&#10;Work out&#10;Take out trash" spellcheck="false"></textarea>
       <div class="landing-actions">
         <span class="landing-count" id="task-count">0 items</span>
         <button class="btn btn-primary" id="task-submit" disabled>
