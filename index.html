@@ -57,11 +57,17 @@
   /* Ranking list scrolls inside its own panel; page never does. */
   #view-rank { overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; }
 
-  .bg-video {
+  /* Extend bg-video and bg-overlay past iOS safe areas so the video
+     visually covers the status bar and bottom URL-bar zone instead of
+     stopping at the chrome edge. */
+  .bg-video, .bg-overlay {
     position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    top: calc(-1 * env(safe-area-inset-top, 0px));
+    left: 0;
+    width: 100vw;
+    height: calc(100vh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  }
+  .bg-video {
     object-fit: cover;
     z-index: -2;
     opacity: 0;
@@ -69,10 +75,6 @@
   }
   .bg-video.loaded { opacity: 1; }
   .bg-overlay {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
     background: linear-gradient(180deg, rgba(245, 248, 235, 0.45) 0%, rgba(238, 242, 228, 0.55) 100%);
     z-index: -1;
     pointer-events: none;
