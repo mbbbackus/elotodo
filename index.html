@@ -33,17 +33,20 @@
     overflow: hidden;
     overscroll-behavior: none;
   }
-  /* html bg matches the deep video tones so iOS safe areas (status bar,
-     bottom URL bar zone) don't show plain white. */
-  html { background: var(--accent-deep); }
+  /* All page-level color lives on html so iOS safe areas blend, AND so
+     body can stay transparent — otherwise body's own bg would paint on top
+     of the .bg-video (which sits at z-index -2 inside body). */
+  html {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, #d9e8c2 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, #e2efd4 0%, transparent 60%),
+      linear-gradient(180deg, #eef5e1 0%, var(--accent-deep) 100%);
+  }
   body {
     margin: 0;
     font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
     font-weight: 500;
-    background:
-      radial-gradient(ellipse 80% 60% at 20% 0%, #d9e8c2 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, #e2efd4 0%, transparent 60%),
-      linear-gradient(180deg, #eef5e1 0%, var(--bg) 100%);
+    background: transparent;
     color: var(--text);
     display: flex;
     flex-direction: column;
