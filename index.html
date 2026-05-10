@@ -95,6 +95,10 @@
     margin: 0;
     letter-spacing: 0.3px;
   }
+  .header-buttons {
+    display: flex;
+    gap: 8px;
+  }
   .header-reset {
     display: inline-flex;
     align-items: center;
@@ -115,7 +119,14 @@
       color: var(--danger);
       border-color: var(--danger);
     }
+    .header-edit:hover {
+      color: var(--accent-deep);
+      border-color: var(--accent-deep);
+    }
   }
+  /* Edit button only appears on the ranking page */
+  .header-edit { display: none; }
+  body.rank-mode .header-edit { display: inline-flex; }
 
   main {
     flex: 1;
@@ -367,10 +378,11 @@
     line-height: 1.5;
     opacity: 0.85;
   }
-  .landing-card textarea {
+  .landing-card .task-editor {
     width: 100%;
     min-height: 220px;
-    resize: vertical;
+    max-height: 50vh;
+    overflow-y: auto;
     background: rgba(255, 255, 255, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.7);
     border-radius: 12px;
@@ -382,14 +394,28 @@
     color: var(--text);
     outline: none;
     transition: border-color 0.15s ease, background 0.15s ease;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
-  .landing-card textarea:focus {
+  .landing-card .task-editor:focus {
     border-color: var(--accent);
     background: rgba(255, 255, 255, 0.75);
   }
-  .landing-card textarea::placeholder {
+  .landing-card .task-editor:empty::before {
+    content: attr(data-placeholder);
     color: var(--muted);
     opacity: 0.7;
+    white-space: pre-wrap;
+    pointer-events: none;
+  }
+  .landing-card .task-editor .editor-completed {
+    text-decoration: line-through;
+    opacity: 0.55;
+  }
+  .landing-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
   }
   .landing-actions {
     display: flex;
@@ -429,7 +455,7 @@
   body.landing-mode .actions,
   body.landing-mode .time-tracker,
   body.landing-mode .auto-timer,
-  body.landing-mode .header-reset {
+  body.landing-mode .header-buttons {
     display: none !important;
   }
 
@@ -630,7 +656,7 @@
     }
     .landing-card h2 { font-size: 19px; }
     .landing-card p { font-size: 13px; line-height: 1.4; }
-    .landing-card textarea { min-height: 150px; }
+    .landing-card .task-editor { min-height: 150px; max-height: 40vh; }
 
     #view-match {
       display: flex;
@@ -701,9 +727,14 @@
 <div class="bg-overlay"></div>
 <header>
   <h1>ELO Todo</h1>
-  <button class="header-reset" id="btn-reset" title="Reset all rankings">
-    <i class="ph ph-trash"></i> Reset
-  </button>
+  <div class="header-buttons">
+    <button class="header-reset header-edit" id="btn-edit" title="Edit your task list">
+      <i class="ph ph-pencil-simple"></i> Edit
+    </button>
+    <button class="header-reset" id="btn-reset" title="Reset all rankings">
+      <i class="ph ph-trash"></i> Reset
+    </button>
+  </div>
   <div class="auto-timer"><div class="auto-timer-fill" id="auto-timer-fill"></div></div>
 </header>
 
@@ -730,14 +761,22 @@
 
   <section id="view-landing" style="display:none;">
     <div class="landing-card">
-      <h2>What's on your plate?</h2>
-      <p>Let's help you prioritize so you can get back to doing what you want with your time.</p>
-      <textarea id="task-input" placeholder="Call mom&#10;Finish report&#10;Buy groceries&#10;Work out&#10;Take out trash" spellcheck="false"></textarea>
+      <h2 id="landing-heading">What's on your plate?</h2>
+      <p id="landing-subtitle">Let's help you prioritize so you can get back to doing what you want with your time.</p>
+      <div id="task-input" class="task-editor" contenteditable="true" spellcheck="false" data-placeholder="Call mom
+Finish report
+Buy groceries
+Work out
+Take out trash"></div>
       <div class="landing-actions">
         <span class="landing-count" id="task-count">0 items</span>
-        <button class="btn btn-primary" id="task-submit" disabled>
-          Start ranking <i class="ph-fill ph-arrow-right"></i>
-        </button>
+        <div class="landing-buttons">
+          <button class="btn" id="task-cancel" style="display:none;">Cancel</button>
+          <button class="btn btn-primary" id="task-submit" disabled>
+            <span id="task-submit-label">Start ranking</span>
+            <i class="ph-fill ph-arrow-right"></i>
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -1272,18 +1311,65 @@ function setMode(mode) {
 tabMatch.addEventListener("click", () => setMode("match"));
 tabRank.addEventListener("click", () => setMode("rank"));
 
-// --- Landing page submit ---
+// --- Landing page (initial bootstrap + edit mode) ---
 const taskInput = document.getElementById("task-input");
 const taskSubmit = document.getElementById("task-submit");
+const taskSubmitLabel = document.getElementById("task-submit-label");
+const taskCancel = document.getElementById("task-cancel");
 const taskCount = document.getElementById("task-count");
+const landingHeading = document.getElementById("landing-heading");
+const landingSubtitle = document.getElementById("landing-subtitle");
+
+let isEditMode = false;
+
+// Read each child element of the contenteditable as one task line.
+// Preserves "completed" if a line still carries the .editor-completed class.
+function readEditorLines() {
+  const out = [];
+  // Browsers wrap newlines in <div> or <p> blocks inside contenteditable.
+  // Fall back to splitting on textContent if there are no block children.
+  const blocks = taskInput.querySelectorAll("div, p");
+  if (blocks.length) {
+    blocks.forEach(b => {
+      const text = b.textContent;
+      if (!text) return;
+      out.push({ raw: text, completed: b.classList.contains("editor-completed") });
+    });
+  } else {
+    const text = taskInput.textContent || "";
+    text.split(/\r?\n/).forEach(line => out.push({ raw: line, completed: false }));
+  }
+  // Apply the same prefix stripping as parseTaskList, drop empties.
+  return out
+    .map(({ raw, completed }) => {
+      const cleaned = raw
+        .replace(/^[\s\-\*\u2022\u00b7\u25aa\u25cf]+/, "")
+        .replace(/^\d+[\.\)]\s*/, "")
+        .replace(/^[a-zA-Z][\.\)]\s+/, "")
+        .trim();
+      return { name: cleaned, completed };
+    })
+    .filter(line => line.name.length > 0)
+    .slice(0, 200);
+}
 
 function updateTaskCount() {
-  const items = parseTaskList(taskInput.value);
+  const items = readEditorLines();
+  const activeCount = items.filter(i => !i.completed).length;
   taskCount.textContent = items.length === 1 ? "1 item" : `${items.length} items`;
-  taskSubmit.disabled = items.length < 2;
+  taskSubmit.disabled = isEditMode ? activeCount < 2 : items.length < 2;
 }
 taskInput.addEventListener("input", updateTaskCount);
-taskInput.addEventListener("paste", () => setTimeout(updateTaskCount, 0));
+taskInput.addEventListener("paste", (e) => {
+  // Force plain-text paste so HTML formatting from clipboard doesn't survive.
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+  document.execCommand("insertText", false, text);
+});
+
+function clearEditor() {
+  taskInput.innerHTML = "";
+}
 
 function startWithTasks(tasks) {
   state.items = tasks.map((name, idx) => ({
@@ -1305,18 +1391,88 @@ function startWithTasks(tasks) {
   renderAll();
 }
 
+// Apply an edit: merge new list with existing state, preserving ELO and match
+// counts for items whose names are unchanged. Items dropped from the list are
+// removed entirely. New items get default ELO.
+function applyEdit(lines) {
+  const oldByName = new Map(state.items.map(it => [it.name, it]));
+  const newItems = lines.map(({ name, completed }, idx) => {
+    const existing = oldByName.get(name);
+    if (existing) {
+      return { ...existing, idx, completed: !!existing.completed || completed };
+    }
+    return {
+      name,
+      icon: pickIcon(name),
+      elo: START_ELO,
+      n: 0,
+      idx,
+      completed: !!completed,
+    };
+  });
+  state.items = newItems;
+  // History references old indices; safest to clear it on edits.
+  state.history = [];
+  state.recentDeltas = [];
+  saveState();
+  currentPair = null;
+  recentPairs = [];
+  resetLandingCopy();
+  setMode("match");
+  renderAll();
+}
+
 taskSubmit.addEventListener("click", () => {
-  const tasks = parseTaskList(taskInput.value);
-  if (tasks.length < 2) return;
-  startWithTasks(tasks);
+  const lines = readEditorLines();
+  if (isEditMode) {
+    if (lines.filter(l => !l.completed).length < 2) return;
+    applyEdit(lines);
+  } else {
+    const names = lines.map(l => l.name);
+    if (names.length < 2) return;
+    startWithTasks(names);
+  }
 });
-// Ctrl/Cmd+Enter from inside the textarea also submits
+// Ctrl/Cmd+Enter from inside the editor also submits
 taskInput.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
     e.preventDefault();
     taskSubmit.click();
   }
 });
+
+taskCancel.addEventListener("click", () => {
+  // Discard edits and go back to the ranking view.
+  resetLandingCopy();
+  setMode("rank");
+});
+
+// --- Edit-mode entry ---
+function enterEditMode() {
+  isEditMode = true;
+  // Pre-populate the editor with existing items, completed ones flagged.
+  taskInput.innerHTML = state.items.map(it => {
+    const cls = it.completed ? ' class="editor-completed"' : '';
+    return `<div${cls}>${escapeHtml(it.name)}</div>`;
+  }).join("");
+  landingHeading.textContent = "Edit your list";
+  landingSubtitle.textContent = "Add or remove items. Your existing rankings will be preserved. Completed items are shown struck-through.";
+  taskSubmitLabel.textContent = "Save changes";
+  taskCancel.style.display = "";
+  setMode("landing");
+  updateTaskCount();
+}
+
+// Reset to "fresh start" copy when leaving edit mode (via cancel/submit/landing).
+function resetLandingCopy() {
+  isEditMode = false;
+  landingHeading.textContent = "What's on your plate?";
+  landingSubtitle.textContent = "Let's help you prioritize so you can get back to doing what you want with your time.";
+  taskSubmitLabel.textContent = "Start ranking";
+  taskCancel.style.display = "none";
+}
+
+document.getElementById("btn-edit").addEventListener("click", enterEditMode);
 
 // --- Wiring ---
 document.getElementById("card-left").addEventListener("click", () => vote("left"));
@@ -1334,7 +1490,8 @@ document.getElementById("reset-confirm").addEventListener("click", () => {
   currentPair = null;
   recentPairs = [];
   resetModal.classList.remove("show");
-  taskInput.value = "";
+  clearEditor();
+  resetLandingCopy();
   updateTaskCount();
   setMode("landing");
 });
